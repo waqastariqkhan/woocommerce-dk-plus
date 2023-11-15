@@ -3,8 +3,6 @@
  * The plugin bootstrap file
  *
  * @link              https://github.com/waqastariqkhan
- * @since             1.0.0
- * @package           Vogue_Erp
  *
  * @wordpress-plugin
  * Plugin Name:       Woocommerce DK Plus - Invoice Generator
@@ -24,7 +22,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class WC_DK_PLUS{
-    private $api_endpoint;
-    private $api_key;
+
+define( 'WC_DK_PLUS_DIR', plugin_dir_path( __FILE__ ) );
+define( 'WC_DK_PLUS_URL', plugin_dir_url( __FILE__ ) );
+
+
+
+// Include the necessary files.
+require_once WC_DK_PLUS_DIR . 'includes/class-wc-dk-plus.php';
+
+add_action( 'init', 'build_opt_landsearch_xml_feed');
+
+function build_opt_landsearch_xml_feed(){
+    $xml = new WC_DK_PLUS();
+    $xml->init();
 }
