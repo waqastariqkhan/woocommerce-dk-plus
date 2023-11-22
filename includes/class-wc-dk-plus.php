@@ -28,6 +28,5 @@ class WC_DK_PLUS{
             echo 'Response:' . "\n";
             var_dump($curl->response);
         }
-        die;
     }
 }

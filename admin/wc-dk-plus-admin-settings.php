@@ -1,151 +1,127 @@
 <?php
 
-/**
- * @internal never define functions inside callbacks.
- * these functions could be run multiple times; this would result in a fatal error.
- */
+class WC_DK_PLUS_Settings {
+	private $options;
 
-/**
- * custom option and settings
- */
-function wporg_settings_init() {
-	// Register a new setting for "wporg" page.
-	register_setting( 'wporg', 'wporg_options' );
-
-	// Register a new section in the "wporg" page.
-	add_settings_section(
-		'wporg_section_developers',
-		__( 'The Matrix has you.', 'wporg' ), 'wporg_section_developers_callback',
-		'wporg'
-	);
-
-	// Register a new field in the "wporg_section_developers" section, inside the "wporg" page.
-	add_settings_field(
-		'wporg_field_pill', // As of WP 4.6 this value is used only internally.
-		                        // Use $args' label_for to populate the id inside the callback.
-			__( 'Pill', 'wporg' ),
-		'wporg_field_pill_cb',
-		'wporg',
-		'wporg_section_developers',
-		array(
-			'label_for'         => 'wporg_field_pill',
-			'class'             => 'wporg_row',
-			'wporg_custom_data' => 'custom',
-		)
-	);
-}
-
-/**
- * Register our wporg_settings_init to the admin_init action hook.
- */
-add_action( 'admin_init', 'wporg_settings_init' );
-
-
-/**
- * Custom option and settings:
- *  - callback functions
- */
-
-
-/**
- * Developers section callback function.
- *
- * @param array $args  The settings array, defining title, id, callback.
- */
-function wporg_section_developers_callback( $args ) {
-	?>
-	<p id="<?php echo esc_attr( $args['id'] ); ?>"><?php esc_html_e( 'Follow the white rabbit.', 'wporg' ); ?></p>
-	<?php
-}
-
-/**
- * Pill field callbakc function.
- *
- * WordPress has magic interaction with the following keys: label_for, class.
- * - the "label_for" key value is used for the "for" attribute of the <label>.
- * - the "class" key value is used for the "class" attribute of the <tr> containing the field.
- * Note: you can add custom key value pairs to be used inside your callbacks.
- *
- * @param array $args
- */
-function wporg_field_pill_cb( $args ) {
-	// Get the value of the setting we've registered with register_setting()
-	$options = get_option( 'wporg_options' );
-	?>
-	<select
-			id="<?php echo esc_attr( $args['label_for'] ); ?>"
-			data-custom="<?php echo esc_attr( $args['wporg_custom_data'] ); ?>"
-			name="wporg_options[<?php echo esc_attr( $args['label_for'] ); ?>]">
-		<option value="red" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'red', false ) ) : ( '' ); ?>>
-			<?php esc_html_e( 'red pill', 'wporg' ); ?>
-		</option>
- 		<option value="blue" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'blue', false ) ) : ( '' ); ?>>
-			<?php esc_html_e( 'blue pill', 'wporg' ); ?>
-		</option>
-	</select>
-	<p class="description">
-		<?php esc_html_e( 'You take the blue pill and the story ends. You wake in your bed and you believe whatever you want to believe.', 'wporg' ); ?>
-	</p>
-	<p class="description">
-		<?php esc_html_e( 'You take the red pill and you stay in Wonderland and I show you how deep the rabbit-hole goes.', 'wporg' ); ?>
-	</p>
-	<?php
-}
-
-/**
- * Add the top level menu page.
- */
-function wporg_options_page() {
-	add_menu_page(
-		'WPOrg',
-		'WPOrg Options',
-		'manage_options',
-		'wporg',
-		'wporg_options_page_html'
-	);
-}
-
-
-/**
- * Register our wporg_options_page to the admin_menu action hook.
- */
-add_action( 'admin_menu', 'wporg_options_page' );
-
-
-/**
- * Top level menu callback function
- */
-function wporg_options_page_html() {
-	// check user capabilities
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
+	public function __construct() {
+		add_action( 'admin_init', array( $this, 'init' ) );
+		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
 	}
 
-	// add error/update messages
+	public function init() {
+		
+        add_settings_section( 'wc_dk_plus_section_developers', __( 'Save DK Plus API username and password', 'wc_dk_plus_td' ), array( $this, 'developers_section_callback' ), 'wc_dk_plus_page' );
+        
+        register_setting(
+            'wc_dk_plus_setting',
+            'wc_dk_plus_username', 
+            array( $this, 'sanitize' ) // Sanitize
+        );
+        
+		add_settings_field(
+			'wc_dk_plus_username',
+			__( 'Username', 'wc_dk_plus_td' ),
+			array( $this, 'settings_username_callback' ),
+			'wc_dk_plus_page',
+			'wc_dk_plus_section_developers',
+			array(
+				'label_for'             => 'wc_dkplus_username',
+				'class'                 => 'wc_dkplus_row',
+				'wc_dkplus_custom_data' => 'custom',
+			)
+		);
+        
+        register_setting(
+            'wc_dk_plus_setting',
+            'wc_dk_plus_password', 
+            array( $this, 'sanitize' ) // Sanitize
+        );
+        
+        
+        add_settings_field(
+			'wc_dk_plus_password',
+			__( 'Password', 'wc_dk_plus_td' ),
+			array( $this, 'settings_password_callback' ),
+			'wc_dk_plus_page',
+			'wc_dk_plus_section_developers',
+			array(
+				'label_for'             => 'wc_dkplus_password',
+				'class'                 => 'wc_dkplus_row',
+				'wc_dkplus_custom_data' => 'custom',
+			)
+		);
+	}
+    
+    /**
+     * Sanitize each setting field as needed
+     *
+     * @param array $input Contains all settings fields as array keys
+     */
+    public function sanitize( $input )
+    {
+        $new_input = array();
+        if( isset( $input['username'] ) )
+            $new_input['username'] = absint( $input['username'] );
 
-	// check if the user have submitted the settings
-	// WordPress will add the "settings-updated" $_GET parameter to the url
-	if ( isset( $_GET['settings-updated'] ) ) {
-		// add settings saved message with the class of "updated"
-		add_settings_error( 'wporg_messages', 'wporg_message', __( 'Settings Saved', 'wporg' ), 'updated' );
+        if( isset( $input['password'] ) )
+            $new_input['password'] = sanitize_text_field( $input['password'] );
+
+        return $new_input;
+    }
+
+
+	public function add_menu_page() {
+		add_menu_page(
+			'Woocommerce - DK Plus Settings',
+			'DK Plus Options',
+			'manage_options',
+			'wc_dk_plus_page',
+			array( $this, 'options_page_html' )
+		);
 	}
 
-	// show error/update messages
-	settings_errors( 'wporg_messages' );
-	?>
-	<div class="wrap">
-		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-		<form action="options.php" method="post">
-			<?php
-			// output security fields for the registered setting "wporg"
-			settings_fields( 'wporg' );
-			// output setting sections and their fields
-			// (sections are registered for "wporg", each field is registered to a specific section)
-			do_settings_sections( 'wporg' );
-			// output save settings button
-			submit_button( 'Save Settings' );
-			?>
-		</form>
-	</div>
-	<?php
+	public function developers_section_callback( $args ) {
+		echo '<p id="' . esc_attr( $args['id'] ) . '">' . esc_html__( '', 'wc_dk_plus_td' ) . '</p>';
+	}
+
+	public function settings_username_callback( $args ) {
+		$this->options = get_option( 'wporg_options' );
+		?>
+		<input type="text" id="<?php echo esc_attr( $args['label_for'] ); ?>" name="wporg_options[<?php echo esc_attr( $args['label_for'] ); ?>]" value="<?php echo isset( $this->options[ $args['label_for'] ] ) ? esc_attr( $this->options[ $args['label_for'] ] ) : ''; ?>" /> 
+        <?php
+	}
+    
+    public function settings_password_callback ($args) {
+        $this->options = get_option( 'wporg_options' );
+       ?> 	
+    <input type="password" id="<?php echo esc_attr( $args['label_for'] ); ?>_password" name="wporg_options[<?php echo esc_attr( $args['label_for'] ); ?>_password]" value="<?php echo isset( $this->options[ $args['label_for'] . '_password' ] ) ? esc_attr( $this->options[ $args['label_for'] . '_password' ] ) : ''; ?>" />
+    <?php
+    }
+
+	public function options_page_html() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( isset( $_GET['settings-updated'] ) ) {
+			add_settings_error( 'wc_dkplus_messages', 'wc_dkplus_message', __( 'Settings Saved', 'wc_dk_plus_td' ), 'updated' );
+		}
+
+		settings_errors( 'wc_dkplus_messages' );
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<form action="options.php" method="post">
+				<?php
+				settings_fields( 'wc_dk_plus_setting' );
+				do_settings_sections( 'wc_dk_plus_page' );
+				submit_button( 'Save Settings' );
+				?>
+			</form>
+		</div>
+		<?php
+	}
 }
+
+// Instantiate the class
+$wc_dkplus_settings = new WC_DK_PLUS_Settings();
