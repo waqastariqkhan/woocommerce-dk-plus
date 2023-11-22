@@ -2,13 +2,10 @@
 /**
  * The plugin bootstrap file
  *
- *
  * @link              https://github.com/waqastariqkhan
- * @since             1.0.0
- * @package           Vogue_Erp
  *
  * @wordpress-plugin
- * Plugin Name:       Woocommerce DK Plus - Invoice Generator   
+ * Plugin Name:       Woocommerce DK Plus - Invoice Generator
  * Plugin URI:        https://github.com/waqastariqkhan/woocommerce-dk-plus
  * Description:       Generate an invoice in the DK plus management system when an order is placed in the Woocommerce
  * Version:           1.0.0
@@ -19,5 +16,27 @@
  * Text Domain:       wc-dk-plus
  * Domain Path:       /languages
  */
- 
- 
+
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly
+}
+
+
+define( 'WC_DK_PLUS_DIR', plugin_dir_path( __FILE__ ) );
+define( 'WC_DK_PLUS_URL', plugin_dir_url( __FILE__ ) );
+
+
+
+// Include the necessary files.
+require_once WC_DK_PLUS_DIR . 'includes/class-wc-dk-plus-api.php';
+
+
+add_action( 'init', 'build_opt_landsearch_xml_feed');
+
+function build_opt_landsearch_xml_feed(){
+    require_once WC_DK_PLUS_DIR . 'admin/wc-dk-plus-admin-settings.php';
+
+     $conn = new WC_DK_PLUS_API();
+     $conn->init();
+}
