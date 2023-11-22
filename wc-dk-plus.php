@@ -29,7 +29,7 @@ define( 'WC_DK_PLUS_URL', plugin_dir_url( __FILE__ ) );
 
 
 // Include the necessary files.
-require_once WC_DK_PLUS_DIR . 'includes/class-wc-dk-plus.php';
+require_once WC_DK_PLUS_DIR . 'includes/class-wc-dk-plus-api.php';
 
 
 add_action( 'init', 'build_opt_landsearch_xml_feed');
@@ -37,6 +37,6 @@ add_action( 'init', 'build_opt_landsearch_xml_feed');
 function build_opt_landsearch_xml_feed(){
     require_once WC_DK_PLUS_DIR . 'admin/wc-dk-plus-admin-settings.php';
 
-    // $xml = new WC_DK_PLUS();
-    // $xml->init();
+     $conn = new WC_DK_PLUS_API();
+     $conn->init();
 }

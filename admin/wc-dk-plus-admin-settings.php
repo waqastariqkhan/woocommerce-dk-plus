@@ -1,7 +1,8 @@
 <?php
 
 class WC_DK_PLUS_Settings {
-	private $options;
+	private $username;
+    private $password;
 
 	public function __construct() {
 		add_action( 'admin_init', array( $this, 'init' ) );
@@ -9,65 +10,59 @@ class WC_DK_PLUS_Settings {
 	}
 
 	public function init() {
-		
-        add_settings_section( 'wc_dk_plus_section_developers', __( 'Save DK Plus API username and password', 'wc_dk_plus_td' ), array( $this, 'developers_section_callback' ), 'wc_dk_plus_page' );
-        
-        register_setting(
-            'wc_dk_plus_setting',
-            'wc_dk_plus_username', 
-            array( $this, 'sanitize' ) // Sanitize
-        );
-        
+
+		add_settings_section( 'wc_dk_plus_section', __( 'Save DK Plus API username and password', 'wc_dk_plus_td' ), array( $this, 'developers_section_callback' ), 'wc_dk_plus_page' );
+
 		add_settings_field(
 			'wc_dk_plus_username',
 			__( 'Username', 'wc_dk_plus_td' ),
 			array( $this, 'settings_username_callback' ),
 			'wc_dk_plus_page',
-			'wc_dk_plus_section_developers',
+			'wc_dk_plus_section',
 			array(
-				'label_for'             => 'wc_dkplus_username',
-				'class'                 => 'wc_dkplus_row',
-				'wc_dkplus_custom_data' => 'custom',
+				'label_for'             => 'wc_dk_plus_username'
 			)
 		);
-        
-        register_setting(
-            'wc_dk_plus_setting',
-            'wc_dk_plus_password', 
-            array( $this, 'sanitize' ) // Sanitize
-        );
-        
-        
-        add_settings_field(
+
+		add_settings_field(
 			'wc_dk_plus_password',
 			__( 'Password', 'wc_dk_plus_td' ),
 			array( $this, 'settings_password_callback' ),
 			'wc_dk_plus_page',
-			'wc_dk_plus_section_developers',
+			'wc_dk_plus_section',
 			array(
-				'label_for'             => 'wc_dkplus_password',
-				'class'                 => 'wc_dkplus_row',
-				'wc_dkplus_custom_data' => 'custom',
+				'label_for'             => 'wc_dk_plus_password',
 			)
 		);
+        
+		register_setting(
+			'wc_dk_plus_page',
+			'wc_dk_plus_password',
+		); 
+		register_setting(
+			'wc_dk_plus_page',
+			'wc_dk_plus_username',
+		);
+
 	}
-    
-    /**
-     * Sanitize each setting field as needed
-     *
-     * @param array $input Contains all settings fields as array keys
-     */
-    public function sanitize( $input )
-    {
-        $new_input = array();
-        if( isset( $input['username'] ) )
-            $new_input['username'] = absint( $input['username'] );
 
-        if( isset( $input['password'] ) )
-            $new_input['password'] = sanitize_text_field( $input['password'] );
+	/**
+	 * Sanitize each setting field as needed
+	 *
+	 * @param array $input Contains all settings fields as array keys
+	 */
+	public function sanitize( $input ) {
+		$new_input = array();
+		if ( isset( $input['wc_dk_plus_username'] ) ) {
+			$new_input['wc_dk_plus_username'] = absint( $input['wc_dk_plus_username'] );
+		}
 
-        return $new_input;
-    }
+		if ( isset( $input['wc_dk_plus_password'] ) ) {
+			$new_input['wc_dk_plus_password'] = sanitize_text_field( $input['wc_dk_plus_password'] );
+		}
+
+		return $new_input;
+	}
 
 
 	public function add_menu_page() {
@@ -85,18 +80,18 @@ class WC_DK_PLUS_Settings {
 	}
 
 	public function settings_username_callback( $args ) {
-		$this->options = get_option( 'wporg_options' );
+		$this->username = get_option( 'wc_dk_plus_username' );
 		?>
-		<input type="text" id="<?php echo esc_attr( $args['label_for'] ); ?>" name="wporg_options[<?php echo esc_attr( $args['label_for'] ); ?>]" value="<?php echo isset( $this->options[ $args['label_for'] ] ) ? esc_attr( $this->options[ $args['label_for'] ] ) : ''; ?>" /> 
-        <?php
+		<input type="text" id="<?php echo esc_attr( $args['label_for'] ); ?>" name="<?php echo esc_attr( $args['label_for'] ); ?>" value="<?php echo isset( $this->username ) ? esc_attr( $this->username ) : 'username-text'; ?>" /> 
+		<?php
 	}
-    
-    public function settings_password_callback ($args) {
-        $this->options = get_option( 'wporg_options' );
-       ?> 	
-    <input type="password" id="<?php echo esc_attr( $args['label_for'] ); ?>_password" name="wporg_options[<?php echo esc_attr( $args['label_for'] ); ?>_password]" value="<?php echo isset( $this->options[ $args['label_for'] . '_password' ] ) ? esc_attr( $this->options[ $args['label_for'] . '_password' ] ) : ''; ?>" />
-    <?php
-    }
+
+	public function settings_password_callback( $args ) {
+		$this->password = get_option( 'wc_dk_plus_password' );
+		?>
+		<input type="password" id="<?php echo esc_attr( $args['label_for'] ); ?>" name="<?php echo esc_attr( $args['label_for']); ?>" value="<?php echo isset( $this->password ) ? esc_attr( $this->password ) : 'password-text'; ?>" />
+		<?php
+	}
 
 	public function options_page_html() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -113,7 +108,7 @@ class WC_DK_PLUS_Settings {
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<form action="options.php" method="post">
 				<?php
-				settings_fields( 'wc_dk_plus_setting' );
+				settings_fields( 'wc_dk_plus_page' );
 				do_settings_sections( 'wc_dk_plus_page' );
 				submit_button( 'Save Settings' );
 				?>
