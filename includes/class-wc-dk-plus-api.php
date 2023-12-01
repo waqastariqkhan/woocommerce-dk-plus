@@ -24,11 +24,12 @@ class WC_DK_PLUS_API {
 		$curl->setBasicAuthentication( $this->username, $this->password );
 		$curl->setUserAgent( $request['user_agent'] );
 		$curl->setHeader( 'X-Requested-With', 'XMLHttpRequest' );
+        $curl->setHeader(  'Content-Type', 'application/json');
 		$curl->setCookie( 'request_sender', 'aksurweb' );
 
-		if ( $request['request_type'] == 'GET' ) {
+		if ( $request['request_type'] === 'GET' ) {
 			$curl->get( $request['endpoint'] );
-		} elseif ( $request['request_type'] == 'POST' ) {
+		} elseif ( $request['request_type'] === 'POST' ) {
 			$curl->post( $request['endpoint'], $payload );
 		}
 
