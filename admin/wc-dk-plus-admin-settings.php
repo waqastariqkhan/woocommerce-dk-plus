@@ -1,5 +1,8 @@
 <?php
 
+if ( !defined( 'ABSPATH' ) )
+   exit;
+
 class WC_DK_PLUS_Settings {
 	private $username;
     private $password;
@@ -117,6 +120,3 @@ class WC_DK_PLUS_Settings {
 		<?php
 	}
 }
-
-// Instantiate the class
-$wc_dkplus_settings = new WC_DK_PLUS_Settings();
