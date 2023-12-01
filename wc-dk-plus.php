@@ -61,40 +61,39 @@ function make_get_reqeust( $order_id ) {
 		return;
 	}
 
-	$order_data    = $order->get_data();    
-    $WC_order_date = $order->get_date_created();
+	$order_data    = $order->get_data();
+	$WC_order_date = $order->get_date_created();
 
-    if ( method_exists( $WC_order_date, 'getTimestamp' ) ) {
-        $timestamp = $WC_order_date->getTimestamp();
-        $date_object = new DateTime();
-        $date_object->setTimestamp($timestamp);       
-    } 
-    else{
-        $date_object = new DateTime();
-    }
-   
-    $formatted_date = $date_object->format('Y-m-d H:i:s');
-    
+	if ( method_exists( $WC_order_date, 'getTimestamp' ) ) {
+		$timestamp   = $WC_order_date->getTimestamp();
+		$date_object = new DateTime();
+		$date_object->setTimestamp( $timestamp );
+	} else {
+		$date_object = new DateTime();
+	}
+
+	$formatted_date = $date_object->format( 'Y-m-d H:i:s' );
+
 	$body = array(
-        'Reference'=> $order_id,
-		'Customer' => array(
+		'Reference'   => $order_id,
+		'Customer'    => array(
 			'Number'   => $order_data['customer_id'],
 			'Name'     => $order_data['billing']['first_name'] . ' ' . $order_data['billing']['last_name'],
 			'Address1' => $order_data['billing']['address_1'],
 			'Address2' => $order_data['billing']['address_2'],
 		),
-        'SalesPerson'=> "Waqas",
-		'Options'  => array(
+		'SalesPerson' => 'Waqas',
+		'Options'     => array(
 			'OriginalPrices' => 0,
 		),
-		'Date'     => $formatted_date,
-		'Currency' => 'ISK',
-		'Exchange' => 1,
-		'Payments' => array(
+		'Date'        => $formatted_date,
+		'Currency'    => 'ISK',
+		'Exchange'    => 1,
+		'Payments'    => array(
 			array(
 				'ID'     => 14,
 				'Name'   => $order_data['payment_method_title'],
-				'Amount' => $order->get_total()
+				'Amount' => $order->get_total(),
 			),
 		),
 	);
@@ -126,18 +125,16 @@ function make_get_reqeust( $order_id ) {
 	}
 
 	$payload = json_encode( $body, JSON_PRETTY_PRINT );
-    
+
 	$request = array(
-		'user_agent'  => 'WooocommerceDKPlus/0.0.1',
-		'endpoint'    => 'https://api.dkplus.is/api/v1/sales/invoice/?post=true',
+		'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+		'endpoint'     => 'https://api.dkplus.is/api/v1/sales/invoice/?post=true',
 		'request_type' => 'POST',
 	);
 
 	$conn     = new WC_DK_PLUS_API();
 	$response = $conn->http_request( $request, $payload );
     
-    exit;
-
 	return $response;
 }
 
