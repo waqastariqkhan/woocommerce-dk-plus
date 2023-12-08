@@ -24,7 +24,7 @@ class WC_DK_PLUS_API {
 		$curl->setBasicAuthentication( $this->username, $this->password );
 		$curl->setUserAgent( $request['user_agent'] );
 		$curl->setHeader( 'X-Requested-With', 'XMLHttpRequest' );
-        $curl->setHeader(  'Content-Type', 'application/json');
+		$curl->setHeader( 'Content-Type', 'application/json' );
 		$curl->setCookie( 'request_sender', 'aksurweb' );
 
 		if ( $request['request_type'] === 'GET' ) {
@@ -34,11 +34,11 @@ class WC_DK_PLUS_API {
 		}
 
 		if ( $curl->error ) {
-            $response =  'Error: ' . $curl->errorMessage . "\n";
+			$response = 'Error: ' . $curl->errorMessage . "\n";
 		} else {
-            $response = $curl->response;
+			$response = $curl->response;
 		}
 
-        return $response;
+		return $response;
 	}
 }

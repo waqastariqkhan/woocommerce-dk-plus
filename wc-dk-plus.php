@@ -61,40 +61,39 @@ function make_get_reqeust( $order_id ) {
 		return;
 	}
 
-	$order_data    = $order->get_data();    
-    $WC_order_date = $order->get_date_created();
+	$order_data    = $order->get_data();
+	$WC_order_date = $order->get_date_created();
 
-    if ( method_exists( $WC_order_date, 'getTimestamp' ) ) {
-        $timestamp = $WC_order_date->getTimestamp();
-        $date_object = new DateTime();
-        $date_object->setTimestamp($timestamp);       
-    } 
-    else{
-        $date_object = new DateTime();
-    }
-   
-    $formatted_date = $date_object->format('Y-m-d H:i:s');
-    
+	if ( method_exists( $WC_order_date, 'getTimestamp' ) ) {
+		$timestamp   = $WC_order_date->getTimestamp();
+		$date_object = new DateTime();
+		$date_object->setTimestamp( $timestamp );
+	} else {
+		$date_object = new DateTime();
+	}
+
+	$formatted_date = $date_object->format( 'Y-m-d H:i:s' );
+
 	$body = array(
-        'Reference'=> $order_id,
-		'Customer' => array(
+		'Reference'   => $order_id,
+		'Customer'    => array(
 			'Number'   => $order_data['customer_id'],
 			'Name'     => $order_data['billing']['first_name'] . ' ' . $order_data['billing']['last_name'],
 			'Address1' => $order_data['billing']['address_1'],
 			'Address2' => $order_data['billing']['address_2'],
 		),
-        'SalesPerson'=> "Waqas",
-		'Options'  => array(
+		'SalesPerson' => 'Waqas',
+		'Options'     => array(
 			'OriginalPrices' => 0,
 		),
-		'Date'     => $formatted_date,
-		'Currency' => 'ISK',
-		'Exchange' => 1,
-		'Payments' => array(
+		'Date'        => $formatted_date,
+		'Currency'    => 'ISK',
+		'Exchange'    => 1,
+		'Payments'    => array(
 			array(
 				'ID'     => 14,
 				'Name'   => $order_data['payment_method_title'],
-				'Amount' => $order->get_total()
+				'Amount' => $order->get_total(),
 			),
 		),
 	);
@@ -126,22 +125,74 @@ function make_get_reqeust( $order_id ) {
 	}
 
 	$payload = json_encode( $body, JSON_PRETTY_PRINT );
-    
+
 	$request = array(
-		'user_agent'  => 'WooocommerceDKPlus/0.0.1',
-		'endpoint'    => 'https://api.dkplus.is/api/v1/sales/invoice/?post=true',
+		'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+		'endpoint'     => 'https://api.dkplus.is/api/v1/sales/invoice/?post=true',
 		'request_type' => 'POST',
 	);
 
 	$conn     = new WC_DK_PLUS_API();
 	$response = $conn->http_request( $request, $payload );
     
-    exit;
-
 	return $response;
 }
 
 add_action( 'woocommerce_order_status_completed', 'make_get_reqeust' );
+
+
+
+add_action('init', function (){
+	
+    if( !empty( $_GET['random'] ) ){
+	
+		$products = wc_get_products( array( 'status' => 'publish', 'limit' => -1 ) );
+		
+		$i=0;
+		
+		foreach ( $products as $product ) { 
+										   		
+			$included_vat = $product->get_price();
+
+			$base_price = calculateBasePrice($included_vat, 11);
+			
+			$body = array(
+				'ItemCode'   => $product->get_sku(),
+				'Description' => $product->get_title(),
+				'TaxPercent' => 11,
+				"UnitPrice1" => $base_price
+			);
+			
+			$payload = json_encode( $body, JSON_PRETTY_PRINT );
+			
+			var_dump($payload);
+
+			$request = array(
+				'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+				'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
+				'request_type' => 'POST',
+			);
+
+			$conn     = new WC_DK_PLUS_API();
+			$response = $conn->http_request( $request, $payload );
+			
+			var_dump($response);
+			
+			echo "<br>";
+			
+		}
+    }
+});
+
+
+function calculateBasePrice($price_including_vat, $vat_rate) {
+
+    $vat_rate = $vat_rate / 100;
+    $base_price = $price_including_vat / (1 + $vat_rate);    
+    $base_price = round($base_price, 2);
+	    
+    return $base_price;
+}
 
 
 function prettyPrint( $a ) {
