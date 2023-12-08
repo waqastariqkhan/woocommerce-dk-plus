@@ -141,6 +141,60 @@ function make_get_reqeust( $order_id ) {
 add_action( 'woocommerce_order_status_completed', 'make_get_reqeust' );
 
 
+
+add_action('init', function (){
+	
+    if( !empty( $_GET['random'] ) ){
+	
+		$products = wc_get_products( array( 'status' => 'publish', 'limit' => -1 ) );
+		
+		$i=0;
+		
+		foreach ( $products as $product ) { 
+										   		
+			$included_vat = $product->get_price();
+
+			$base_price = calculateBasePrice($included_vat, 11);
+			
+			$body = array(
+				'ItemCode'   => $product->get_sku(),
+				'Description' => $product->get_title(),
+				'TaxPercent' => 11,
+				"UnitPrice1" => $base_price
+			);
+			
+			$payload = json_encode( $body, JSON_PRETTY_PRINT );
+			
+			var_dump($payload);
+
+			$request = array(
+				'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+				'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
+				'request_type' => 'POST',
+			);
+
+			$conn     = new WC_DK_PLUS_API();
+			$response = $conn->http_request( $request, $payload );
+			
+			var_dump($response);
+			
+			echo "<br>";
+			
+		}
+    }
+});
+
+
+function calculateBasePrice($price_including_vat, $vat_rate) {
+
+    $vat_rate = $vat_rate / 100;
+    $base_price = $price_including_vat / (1 + $vat_rate);    
+    $base_price = round($base_price, 2);
+	    
+    return $base_price;
+}
+
+
 function prettyPrint( $a ) {
 	echo '<pre>';
 	print_r( $a );
