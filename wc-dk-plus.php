@@ -151,6 +151,10 @@ add_action('init', function (){
 		$i=0;
 		
 		foreach ( $products as $product ) { 
+										   
+			if( empty($product->get_sku()) ){
+				continue;
+			} 
 										   		
 			$included_vat = $product->get_price();
 
@@ -165,18 +169,16 @@ add_action('init', function (){
 			
 			$payload = json_encode( $body, JSON_PRETTY_PRINT );
 			
-			var_dump($payload);
+			// $request = array(
+			// 	'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+			// 	'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
+			// 	'request_type' => 'POST',
+			// );
 
-			$request = array(
-				'user_agent'   => 'WooocommerceDKPlus/0.0.1',
-				'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
-				'request_type' => 'POST',
-			);
-
-			$conn     = new WC_DK_PLUS_API();
-			$response = $conn->http_request( $request, $payload );
+			// $conn     = new WC_DK_PLUS_API();
+			// $response = $conn->http_request( $request, $payload );
 			
-			var_dump($response);
+			//var_dump($response);
 			
 			echo "<br>";
 			
@@ -188,7 +190,7 @@ add_action('init', function (){
 function calculateBasePrice($price_including_vat, $vat_rate) {
 
     $vat_rate = $vat_rate / 100;
-    $base_price = $price_including_vat / (1 + $vat_rate);    
+    $base_price = (int) $price_including_vat / (1 + $vat_rate);    
     $base_price = round($base_price, 2);
 	    
     return $base_price;
