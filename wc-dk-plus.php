@@ -132,9 +132,9 @@ function make_get_reqeust( $order_id ) {
 		'request_type' => 'POST',
 	);
 
-	$conn     = new WC_DK_PLUS_API();
-	$response = $conn->http_request( $request, $payload );
-    
+	// $conn     = new WC_DK_PLUS_API();
+	// $response = $conn->http_request( $request, $payload );
+
 	return $response;
 }
 
@@ -142,58 +142,103 @@ add_action( 'woocommerce_order_status_completed', 'make_get_reqeust' );
 
 
 
-add_action('init', function (){
-	
-    if( !empty( $_GET['random'] ) ){
-	
-		$products = wc_get_products( array( 'status' => 'publish', 'limit' => -1 ) );
-		
-		$i=0;
-		
-		foreach ( $products as $product ) { 
-										   
-			if( empty($product->get_sku()) ){
-				continue;
-			} 
-										   		
-			$included_vat = $product->get_price();
+add_action(
+	'init',
+	function () {
 
-			$base_price = calculateBasePrice($included_vat, 11);
-			
-			$body = array(
-				'ItemCode'   => $product->get_sku(),
-				'Description' => $product->get_title(),
-				'TaxPercent' => 11,
-				"UnitPrice1" => $base_price
+		if ( ! empty( $_GET['random'] ) ) {
+
+			$existing_products = get_dk_existing_products();
+
+			$products = wc_get_products(
+				array(
+					'status' => 'publish',
+					'limit'  => -1,
+				)
 			);
 			
-			$payload = json_encode( $body, JSON_PRETTY_PRINT );
-			
-			$request = array(
-				'user_agent'   => 'WooocommerceDKPlus/0.0.1',
-				'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
-				'request_type' => 'POST',
-			);
+			$filePath = WC_DK_PLUS_DIR . '/log.txt';
 
-			$conn     = new WC_DK_PLUS_API();
-			$response = $conn->http_request( $request, $payload );
+			if ( file_exists( $filePath ) ) {
+				unlink($filePath); // Delete the file
+			}
 			
-			var_dump($response);
-			
-			echo "<br>";
-			
+			touch($filePath);
+
+			foreach ( $products as $product ) {
+
+				if ( empty( $product->get_sku() ) || in_array( $product->get_sku(), $existing_products ) ) {
+					file_put_contents( $filePath,  $product->get_sku() . "\n" , FILE_APPEND | LOCK_EX );
+					continue;
+				}
+
+				echo 'Data appended successfully.';
+				$included_vat = $product->get_price();
+
+				$base_price = calculate_base_price( $included_vat, 11 );
+
+				$body = array(
+					'ItemCode'    => $product->get_sku(),
+					'Description' => $product->get_title(),
+					'TaxPercent'  => 11,
+					'UnitPrice1'  => $base_price,
+				);
+
+				$payload = json_encode( $body, JSON_PRETTY_PRINT );
+
+				$request = array(
+					'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+					'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
+					'request_type' => 'POST',
+				);
+
+				// $conn     = new WC_DK_PLUS_API();
+				// $response = $conn->http_request( $request, $payload );
+
+				// var_dump( $response );
+
+				echo '<br>';
+
+			}
+
+			exit;
 		}
-    }
-});
+	}
+);
 
 
-function calculateBasePrice($price_including_vat, $vat_rate) {
+function get_dk_existing_products() {
 
-    $vat_rate = $vat_rate / 100;
-    $base_price = (int) $price_including_vat / (1 + $vat_rate);    
-    $base_price = round($base_price, 2);
-	    
-    return $base_price;
+	$request = array(
+		'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+		'endpoint'     => 'https://api.dkplus.is/api/v1/Product?inactive=false',
+		'request_type' => 'GET',
+	);
+
+	$conn = new WC_DK_PLUS_API();
+
+	$payload = array();
+
+	$response = $conn->http_request( $request, $payload );
+
+	$extracted_products = $response;
+	$item_codes         = array();
+
+	foreach ( $extracted_products as $product ) {
+		$item_codes[] = $product->ItemCode;
+	}
+
+	return $item_codes;
+}
+
+
+function calculate_base_price( $price_including_vat, $vat_rate ) {
+
+	$vat_rate   = $vat_rate / 100;
+	$base_price = (int) $price_including_vat / ( 1 + $vat_rate );
+	$base_price = round( $base_price, 2 );
+
+	return $base_price;
 }
 
 
