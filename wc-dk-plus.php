@@ -75,12 +75,12 @@ function make_get_reqeust( $order_id ) {
 	$body = array(
 		'Reference'   => $order_id,
 		'Customer'    => array(
-			'Number'   => $order_data['customer_id'],
+			'Number'   => empty( $order_data['customer_id'] ) ? $order_id : $order_data['customer_id'],
 			'Name'     => $order_data['billing']['first_name'] . ' ' . $order_data['billing']['last_name'],
 			'Address1' => $order_data['billing']['address_1'],
 			'Address2' => $order_data['billing']['address_2'],
 		),
-		'SalesPerson' => 'Waqas',
+		'SalesPerson' => 'vefur',
 		'Options'     => array(
 			'OriginalPrices' => 0,
 		),
@@ -102,17 +102,18 @@ function make_get_reqeust( $order_id ) {
 
 	foreach ( $order->get_items() as $item_id => $item ) {
 
-		$product_id   = $item->get_product_id();
-		$variation_id = $item->get_variation_id();
-		$product      = $item->get_product();
-		$product_name = $item->get_name();
-		$quantity     = $item->get_quantity();
-		$subtotal     = $item->get_subtotal();
-		$total        = $item->get_total();
+		$product = $item->get_product();
+
+		$product_name = $product->get_name();
+		$sku          = $product->get_sku();
+
+		$quantity = $item->get_quantity();
+		$subtotal = $item->get_subtotal();
+		$total    = $item->get_total();
 
 		// Add each product as a new element in the "Lines" array
 		$body['Lines'][] = array(
-			'ItemCode'       => $product_id,
+			'ItemCode'       => $sku,
 			'Text'           => $product_name,
 			'Quantity'       => $quantity,
 			'IncludingVAT'   => false,
@@ -130,13 +131,21 @@ function make_get_reqeust( $order_id ) {
 		'request_type' => 'POST',
 	);
 
-	// $conn     = new WC_DK_PLUS_API();
-	// $response = $conn->http_request( $request, $payload );
+	$conn     = new WC_DK_PLUS_API();
+	$response = $conn->http_request( $request, $payload );
+
+	$filePath = WC_DK_PLUS_DIR . '/log.txt';
+
+	if ( $response['error'] ) {
+		file_put_contents( $filePath, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
+	} else {
+		file_put_contents( $filePath, 'Invoice for DK Plus with Order ID: ' . $order_id . "\n", FILE_APPEND | LOCK_EX );
+	}
 
 	return $response;
 }
 
-add_action( 'woocommerce_order_status_completed', 'make_get_reqeust' );
+add_action( 'woocommerce_checkout_order_processed', 'make_get_reqeust' );
 
 
 
@@ -145,6 +154,10 @@ add_action(
 	function () {
 
 		if ( ! empty( $_GET['dk_product_import'] ) ) {
+
+			if ( ! current_user_can( 'administrator' ) ) {
+				return;
+			}
 
 			$existing_products = get_dk_existing_products();
 

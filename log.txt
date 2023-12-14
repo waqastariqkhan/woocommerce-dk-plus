@@ -1,36 +1,4 @@
-Products without SKU ID: 45635
-Products without SKU ID: 45244
-Products without SKU ID: 43373
-Products without SKU ID: 43372
-Products without SKU ID: 43371
-Products without SKU ID: 43370
-Products without SKU ID: 42641
-Products without SKU ID: 42640
-Products without SKU ID: 41725
-Products without SKU ID: 41724
-Products without SKU ID: 41723
-Products without SKU ID: 41722
-Products without SKU ID: 41721
-Products without SKU ID: 41720
-Products without SKU ID: 40805
-Products without SKU ID: 40710
-Products without SKU ID: 40709
-Products without SKU ID: 40419
-Products without SKU ID: 40219
-Products without SKU ID: 40218
-Products without SKU ID: 40217
-Products without SKU ID: 40216
-Products without SKU ID: 40215
-Products without SKU ID: 40214
-Products without SKU ID: 40213
-Products without SKU ID: 40212
-Products without SKU ID: 40211
-Products without SKU ID: 40210
-Products without SKU ID: 39853
-Products without SKU ID: 39850
-Products without SKU ID: 39738
-Products without SKU ID: 37692
-Products without SKU ID: 37035
-Products without SKU ID: 37034
-Products without SKU ID: 35302
-API Error: Couldn't resolve host name (CURLE_COULDNT_RESOLVE_HOST): Could not resolve host: aaaaaapi.12333.is
+API Error: HTTP/1.1 400 Bad Request
+API Error: HTTP/1.1 400 Bad Request
+Invoice DK Order ID:48519
+Invoice for DK Plus with Order ID: 48531
