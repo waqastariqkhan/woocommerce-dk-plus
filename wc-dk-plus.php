@@ -5,6 +5,7 @@
  * @link              https://github.com/waqastariqkhan
  *
  * @wordpress-plugin
+ * @package
  * Plugin Name:       Woocommerce DK Plus - Invoice Generator
  * Plugin URI:        https://github.com/waqastariqkhan/woocommerce-dk-plus
  * Description:       Generate an invoice in the DK plus management system when an order is placed in the Woocommerce
@@ -17,9 +18,8 @@
  * Domain Path:       /languages
  */
 
-
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+	exit;
 }
 
 
@@ -36,10 +36,8 @@ require_once WC_DK_PLUS_DIR . 'admin/wc-dk-plus-admin-settings.php';
 add_action( 'init', 'initilize' );
 
 function initilize() {
-	// Instantiate the admin page class
 	$wc_dkplus_settings = new WC_DK_PLUS_Settings();
 }
-
 
 /**
  * Make request when order status is completed
@@ -106,7 +104,7 @@ function make_get_reqeust( $order_id ) {
 
 		$product_id   = $item->get_product_id();
 		$variation_id = $item->get_variation_id();
-		$product      = $item->get_product(); // see link above to get $product info
+		$product      = $item->get_product();
 		$product_name = $item->get_name();
 		$quantity     = $item->get_quantity();
 		$subtotal     = $item->get_subtotal();
@@ -146,7 +144,7 @@ add_action(
 	'init',
 	function () {
 
-		if ( ! empty( $_GET['random'] ) ) {
+		if ( ! empty( $_GET['dk_product_import'] ) ) {
 
 			$existing_products = get_dk_existing_products();
 
@@ -156,23 +154,29 @@ add_action(
 					'limit'  => -1,
 				)
 			);
-			
+
 			$filePath = WC_DK_PLUS_DIR . '/log.txt';
 
 			if ( file_exists( $filePath ) ) {
-				unlink($filePath); // Delete the file
+				unlink( $filePath );
 			}
-			
-			touch($filePath);
+
+			touch( $filePath );
+
+			prettyPrint( $existing_products );
 
 			foreach ( $products as $product ) {
 
-				if ( empty( $product->get_sku() ) || in_array( $product->get_sku(), $existing_products ) ) {
-					file_put_contents( $filePath,  $product->get_sku() . "\n" , FILE_APPEND | LOCK_EX );
+				if ( empty( $product->get_sku() ) ) {
+					file_put_contents( $filePath, 'Products without SKU ID: ' . $product->get_id() . "\n", FILE_APPEND | LOCK_EX );
 					continue;
 				}
 
-				echo 'Data appended successfully.';
+				if ( in_array( $product->get_sku(), $existing_products ) ) {
+					file_put_contents( $filePath, "Existing DK Products' SKU: " . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
+					continue;
+				}
+
 				$included_vat = $product->get_price();
 
 				$base_price = calculate_base_price( $included_vat, 11 );
@@ -192,15 +196,17 @@ add_action(
 					'request_type' => 'POST',
 				);
 
-				// $conn     = new WC_DK_PLUS_API();
-				// $response = $conn->http_request( $request, $payload );
+				$conn     = new WC_DK_PLUS_API();
+				$response = $conn->http_request( $request, $payload );
 
-				// var_dump( $response );
-
-				echo '<br>';
-
+				if ( $response['error'] ) {
+					file_put_contents( $filePath, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
+				} else {
+					file_put_contents( $filePath, 'Product Added in DK with SKU: ' . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
+				}
 			}
 
+			echo 'completed: check log in /log.txt';
 			exit;
 		}
 	}
@@ -221,13 +227,14 @@ function get_dk_existing_products() {
 
 	$response = $conn->http_request( $request, $payload );
 
-	$extracted_products = $response;
+	$extracted_products = $response['data'];
 	$item_codes         = array();
 
 	foreach ( $extracted_products as $product ) {
-		$item_codes[] = $product->ItemCode;
+		if ( ! property_exists( $product, 'Deleted' ) ) {
+				$item_codes[] = $product->ItemCode;
+		}
 	}
-
 	return $item_codes;
 }
 

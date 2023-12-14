@@ -34,9 +34,17 @@ class WC_DK_PLUS_API {
 		}
 
 		if ( $curl->error ) {
-			$response = 'Error: ' . $curl->errorMessage . "\n";
+			$response = [
+                'error' 	=> true,
+                'message' 	=> $curl->errorMessage,
+                'data'		=> null,
+            ];
 		} else {
-			$response = $curl->response;
+			$response = [
+                'error'	  => false,
+                'message' => 'Success',
+                'data' 	  => $curl->response,
+            ];
 		}
 
 		return $response;
