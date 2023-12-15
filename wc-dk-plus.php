@@ -116,7 +116,7 @@ function make_get_reqeust( $order_id ) {
 			'ItemCode'       => $sku,
 			'Text'           => $product_name,
 			'Quantity'       => $quantity,
-			'IncludingVAT'   => false,
+			'IncludingVAT'   => true,
 			'Price'          => $total,
 			'Discount'       => 0,
 			'DiscountAmount' => 0,
