@@ -102,16 +102,13 @@ function make_get_reqeust( $order_id ) {
 
 	foreach ( $order->get_items() as $item_id => $item ) {
 
-		$product = $item->get_product();
-
+		$product 	  = $item->get_product();
 		$product_name = $product->get_name();
 		$sku          = $product->get_sku();
+		$quantity     = $item->get_quantity();
+		$subtotal     = $item->get_subtotal();
+		$total        = $item->get_total();
 
-		$quantity = $item->get_quantity();
-		$subtotal = $item->get_subtotal();
-		$total    = $item->get_total();
-
-		// Add each product as a new element in the "Lines" array
 		$body['Lines'][] = array(
 			'ItemCode'       => $sku,
 			'Text'           => $product_name,
@@ -121,6 +118,17 @@ function make_get_reqeust( $order_id ) {
 			'Discount'       => 0,
 			'DiscountAmount' => 0,
 		);
+	}
+	
+	if( $order->get_shipping_method() === 'Heimsending/Delivery' ) {
+		$body['Lines'][] = array(
+			'ItemCode'       => 'heimsending/delivery',
+			'Text'           => $order->get_shipping_method(),
+			'Quantity'       => 1,
+			'IncludingVAT'   => true,
+			'Price'          => $order->get_shipping_total()
+		);
+		
 	}
 
 	$payload = json_encode( $body, JSON_PRETTY_PRINT );
