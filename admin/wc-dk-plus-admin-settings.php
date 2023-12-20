@@ -71,7 +71,7 @@ class WC_DK_PLUS_Settings {
 	public function add_menu_page() {
 		add_menu_page(
 			'Woocommerce - DK Plus Settings',
-			'DK Plus Options',
+			'DK Plus',
 			'manage_options',
 			'wc_dk_plus_page',
 			array( $this, 'options_page_html' )
