@@ -5,7 +5,7 @@
  * @link              https://github.com/waqastariqkhan
  *
  * @wordpress-plugin
- * @package
+ * @package           None
  * Plugin Name:       Woocommerce DK Plus - Invoice Generator
  * Plugin URI:        https://github.com/waqastariqkhan/woocommerce-dk-plus
  * Description:       Generate an invoice in the DK plus management system when an order is placed in the Woocommerce
@@ -32,19 +32,21 @@ define( 'WC_DK_PLUS_URL', plugin_dir_url( __FILE__ ) );
 require_once WC_DK_PLUS_DIR . 'includes/class-wc-dk-plus-api.php';
 require_once WC_DK_PLUS_DIR . 'admin/wc-dk-plus-admin-settings.php';
 
-
-add_action( 'init', 'initilize' );
-
-function initilize() {
-	$wc_dkplus_settings = new WC_DK_PLUS_Settings();
+/**
+ * Register Settings for DK Plus Plugin
+ */
+function wc_dk_plus_register_settings() {
+	new WC_DK_PLUS_Settings();
 }
+add_action( 'init', 'wc_dk_plus_register_settings' );
+
 
 /**
  * Make request when order status is completed
  *
  * @param int $order_id Order ID.
  */
-function make_get_reqeust( $order_id ) {
+function wc_dk_plus_generate_invoice( $order_id ) {
 
 	$plugin_path = trailingslashit( WP_PLUGIN_DIR ) . 'woocommerce/woocommerce.php';
 
@@ -52,7 +54,6 @@ function make_get_reqeust( $order_id ) {
 		return;
 	}
 
-	// Get an instance of the WC_Order object
 	$order = wc_get_order( $order_id );
 
 	if ( ! $order ) {
@@ -60,10 +61,10 @@ function make_get_reqeust( $order_id ) {
 	}
 
 	$order_data    = $order->get_data();
-	$WC_order_date = $order->get_date_created();
+	$wc_order_date = $order->get_date_created();
 
-	if ( method_exists( $WC_order_date, 'getTimestamp' ) ) {
-		$timestamp   = $WC_order_date->getTimestamp();
+	if ( method_exists( $wc_order_date, 'getTimestamp' ) ) {
+		$timestamp   = $wc_order_date->getTimestamp();
 		$date_object = new DateTime();
 		$date_object->setTimestamp( $timestamp );
 	} else {
@@ -102,7 +103,7 @@ function make_get_reqeust( $order_id ) {
 
 	foreach ( $order->get_items() as $item_id => $item ) {
 
-		$product 	  = $item->get_product();
+		$product      = $item->get_product();
 		$product_name = $product->get_name();
 		$sku          = $product->get_sku();
 		$quantity     = $item->get_quantity();
@@ -119,19 +120,19 @@ function make_get_reqeust( $order_id ) {
 			'DiscountAmount' => 0,
 		);
 	}
-	
-	if( $order->get_shipping_method() === 'Heimsending/Delivery' ) {
+
+	if ( $order->get_shipping_method() === 'Heimsending/Delivery' ) {
 		$body['Lines'][] = array(
-			'ItemCode'       => 'heimsending/delivery',
-			'Text'           => $order->get_shipping_method(),
-			'Quantity'       => 1,
-			'IncludingVAT'   => true,
-			'Price'          => $order->get_shipping_total()
+			'ItemCode'     => 'heimsending/delivery',
+			'Text'         => $order->get_shipping_method(),
+			'Quantity'     => 1,
+			'IncludingVAT' => true,
+			'Price'        => $order->get_shipping_total(),
 		);
-		
+
 	}
 
-	$payload = json_encode( $body, JSON_PRETTY_PRINT );
+	$payload = wp_json_encode( $body, JSON_PRETTY_PRINT );
 
 	$request = array(
 		'user_agent'   => 'WooocommerceDKPlus/0.0.1',
@@ -142,115 +143,109 @@ function make_get_reqeust( $order_id ) {
 	$conn     = new WC_DK_PLUS_API();
 	$response = $conn->http_request( $request, $payload );
 
-	$filePath = WC_DK_PLUS_DIR . '/log.txt';
+	$file_path = WC_DK_PLUS_DIR . '/log.txt';
 
 	if ( $response['error'] ) {
-		file_put_contents( $filePath, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
+		file_put_contents( $file_path, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
 	} else {
-		file_put_contents( $filePath, 'Invoice for DK Plus with Order ID: ' . $order_id . "\n", FILE_APPEND | LOCK_EX );
+		file_put_contents( $file_path, 'Invoice for DK Plus with Order ID: ' . $order_id . "\n", FILE_APPEND | LOCK_EX );
 	}
 
 	return $response;
 }
 
-add_action( 'woocommerce_checkout_order_processed', 'make_get_reqeust' );
+add_action( 'woocommerce_checkout_order_processed', 'wc_dk_plus_generate_invoice' );
 
+/**
+ * Send wocoommerce published products to the DK System
+ */
+function wc_dk_plus_create_products() {
 
+	if ( ! empty( $_GET['dk_product_import'] ) ) {
 
-add_action(
-	'init',
-	function () {
+		if ( ! current_user_can( 'administrator' ) ) {
+			return;
+		}
+		$existing_products = get_dk_existing_products();
 
-		if ( ! empty( $_GET['dk_product_import'] ) ) {
+		$products = wc_get_products(
+			array(
+				'status' => 'publish',
+				'limit'  => -1,
+			)
+		);
 
-			if ( ! current_user_can( 'administrator' ) ) {
-				return;
+		$file_path = WC_DK_PLUS_DIR . '/log.txt';
+
+		if ( file_exists( $file_path ) ) {
+			unlink( $file_path );
+		}
+
+		touch( $file_path );
+
+		prettyPrint( $existing_products );
+
+		foreach ( $products as $product ) {
+
+			if ( empty( $product->get_sku() ) ) {
+				file_put_contents( $file_path, 'Products without SKU ID: ' . $product->get_id() . "\n", FILE_APPEND | LOCK_EX );
+				continue;
 			}
 
-			$existing_products = get_dk_existing_products();
+			if ( in_array( $product->get_sku(), $existing_products ) ) {
+				file_put_contents( $file_path, "Existing DK Products' SKU: " . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
+				continue;
+			}
 
-			$products = wc_get_products(
-				array(
-					'status' => 'publish',
-					'limit'  => -1,
-				)
+			$included_vat = $product->get_price();
+
+			$base_price = calculate_base_price( $included_vat, 11 );
+
+			$body = array(
+				'ItemCode'    => $product->get_sku(),
+				'Description' => $product->get_title(),
+				'TaxPercent'  => 11,
+				'UnitPrice1'  => $base_price,
 			);
 
-			$filePath = WC_DK_PLUS_DIR . '/log.txt';
+			$payload = wp_json_encode( $body, JSON_PRETTY_PRINT );
 
-			if ( file_exists( $filePath ) ) {
-				unlink( $filePath );
+			$request = array(
+				'user_agent'   => 'WooocommerceDKPlus/0.0.1',
+				'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
+				'request_type' => 'POST',
+			);
+
+			$conn     = new WC_DK_PLUS_API();
+			$response = $conn->http_request( $request, $payload );
+
+			if ( $response['error'] ) {
+				file_put_contents( $file_path, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
+			} else {
+				file_put_contents( $file_path, 'Product Added in DK with SKU: ' . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
 			}
-
-			touch( $filePath );
-
-			prettyPrint( $existing_products );
-
-			foreach ( $products as $product ) {
-
-				if ( empty( $product->get_sku() ) ) {
-					file_put_contents( $filePath, 'Products without SKU ID: ' . $product->get_id() . "\n", FILE_APPEND | LOCK_EX );
-					continue;
-				}
-
-				if ( in_array( $product->get_sku(), $existing_products ) ) {
-					file_put_contents( $filePath, "Existing DK Products' SKU: " . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
-					continue;
-				}
-
-				$included_vat = $product->get_price();
-
-				$base_price = calculate_base_price( $included_vat, 11 );
-
-				$body = array(
-					'ItemCode'    => $product->get_sku(),
-					'Description' => $product->get_title(),
-					'TaxPercent'  => 11,
-					'UnitPrice1'  => $base_price,
-				);
-
-				$payload = json_encode( $body, JSON_PRETTY_PRINT );
-
-				$request = array(
-					'user_agent'   => 'WooocommerceDKPlus/0.0.1',
-					'endpoint'     => 'https://api.dkplus.is/api/v1/Product/',
-					'request_type' => 'POST',
-				);
-
-				$conn     = new WC_DK_PLUS_API();
-				$response = $conn->http_request( $request, $payload );
-
-				if ( $response['error'] ) {
-					file_put_contents( $filePath, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
-				} else {
-					file_put_contents( $filePath, 'Product Added in DK with SKU: ' . $product->get_sku() . "\n", FILE_APPEND | LOCK_EX );
-				}
-			}
-
-			echo 'completed: check log in /log.txt';
-			exit;
 		}
+		echo 'completed: check log in /log.txt';
+		exit;
 	}
-);
+}
 
+add_action( 'init', 'wc_dk_plus_create_products' );
 
+/**
+ * Get a list of existing products in the DK System
+ */
 function get_dk_existing_products() {
-
-	$request = array(
+	$request            = array(
 		'user_agent'   => 'WooocommerceDKPlus/0.0.1',
 		'endpoint'     => 'https://api.dkplus.is/api/v1/Product?inactive=false',
 		'request_type' => 'GET',
 	);
-
-	$conn = new WC_DK_PLUS_API();
-
-	$payload = array();
-
-	$response = $conn->http_request( $request, $payload );
-
+	$conn               = new WC_DK_PLUS_API();
+	$payload            = array();
+	$response           = $conn->http_request( $request, $payload );
 	$extracted_products = $response['data'];
 	$item_codes         = array();
-
 	foreach ( $extracted_products as $product ) {
 		if ( ! property_exists( $product, 'Deleted' ) ) {
 				$item_codes[] = $product->ItemCode;
@@ -259,19 +254,15 @@ function get_dk_existing_products() {
 	return $item_codes;
 }
 
-
+/**
+ * Calculate base price of the product excluding VAT
+ *
+ * @param int $price_including_vat price including vat.
+ * @param int $vat_rate total VAT percentage.
+ */
 function calculate_base_price( $price_including_vat, $vat_rate ) {
-
 	$vat_rate   = $vat_rate / 100;
 	$base_price = (int) $price_including_vat / ( 1 + $vat_rate );
 	$base_price = round( $base_price, 2 );
-
 	return $base_price;
-}
-
-
-function prettyPrint( $a ) {
-	echo '<pre>';
-	print_r( $a );
-	echo '</pre>';
 }
