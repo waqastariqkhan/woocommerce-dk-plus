@@ -149,7 +149,6 @@ function wc_dk_plus_generate_invoice( $order_id ) {
 		file_put_contents( $file_path, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
 	} else {
 		file_put_contents( $file_path, 'Invoice for DK Plus with Order ID: ' . $order_id . "\n", FILE_APPEND | LOCK_EX );
-		file_put_contents( $file_path, 'payload:' . $payload . "\n", FILE_APPEND | LOCK_EX );
 	}
 
 	return $response;
