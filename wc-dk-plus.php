@@ -106,9 +106,9 @@ function wc_dk_plus_generate_invoice( $order_id ) {
 		$product      = $item->get_product();
 		$product_name = $product->get_name();
 		$sku          = $product->get_sku();
-		$quantity     = $item->get_quantity();
+		$quantity     = (int) $item->get_quantity();
 		$subtotal     = $item->get_subtotal();
-		$total        = $item->get_total();
+		$total        = (int) ceil( $item->get_total() / $quantity ) ;
 
 		$body['Lines'][] = array(
 			'ItemCode'       => $sku,
@@ -149,12 +149,13 @@ function wc_dk_plus_generate_invoice( $order_id ) {
 		file_put_contents( $file_path, 'API Error: ' . $response['message'] . "\n", FILE_APPEND | LOCK_EX );
 	} else {
 		file_put_contents( $file_path, 'Invoice for DK Plus with Order ID: ' . $order_id . "\n", FILE_APPEND | LOCK_EX );
+		file_put_contents( $file_path, 'payload:' . $payload . "\n", FILE_APPEND | LOCK_EX );
 	}
 
 	return $response;
 }
 
-add_action( 'woocommerce_checkout_order_processed', 'wc_dk_plus_generate_invoice' );
+add_action( 'woocommerce_order_status_processing', 'wc_dk_plus_generate_invoice' );
 
 /**
  * Send wocoommerce published products to the DK System
