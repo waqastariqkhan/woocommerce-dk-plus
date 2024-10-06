@@ -158,6 +158,7 @@ add_action( 'woocommerce_order_status_processing', 'wc_dk_plus_generate_invoice'
 
 /**
  * Send wocoommerce published products to the DK System
+ * New Comment
  */
 function wc_dk_plus_create_products() {
 
